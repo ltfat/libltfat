@@ -35,23 +35,28 @@ if (MSVC)
     if (NOBLASLAPACK)
         SET(CMAKE_CXX_FLAGS "/DNOBLASLAPACK /D_HAS_EXCEPTIONS=0")
     endif (NOBLASLAPACK)
+
+    SET(CMAKE_SHARED_LINKER_FLAGS "/DLTFAT_BUILD_SHARED")
+    SET(CMAKE_STATIC_LINKER_FLAGS "/DLTFAT_BUILD_STATIC")
 else (MSVC)
-    SET(CMAKE_C_FLAGS "-fPIC -Wall -std=c99")
-    SET(CMAKE_CXX_FLAGS "-fPIC -Wall -std=c++11 -fno-exceptions -fno-rtti")
+    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wall -std=c99")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -std=c++11 -fno-exceptions -fno-rtti")
     if (NOBLASLAPACK)
         SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DNOBLASLAPACK")
         SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNOBLASLAPACK")
     endif (NOBLASLAPACK)
 
-    SET(CMAKE_SHARED_LINKER_FLAGS "-Wl,--no-undefined")
+    SET(CMAKE_SHARED_LINKER_FLAGS "-Wl,--no-undefined -Wl,-rpath,$ORIGIN")
     SET(LIBS m)
 endif(MSVC)
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/modules/libltfat/include)
+
 add_subdirectory(modules/libltfat/src)
 
-if (DO_PHASERET)
+if (DO_LIBPHASERET)
     add_subdirectory(modules/libphaseret/src)
-endif (DO_PHASERET)
+endif (DO_LIBPHASERET)
 
 
 
