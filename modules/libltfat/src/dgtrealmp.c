@@ -814,7 +814,7 @@ error :
 
 LTFAT_API int
 LTFAT_NAME(dgtrealmp_execute_niters_compact)(
-    LTFAT_NAME(dgtrealmp_state)* p, ltfat_int itno, LTFAT_COMPLEX* cout)
+    LTFAT_NAME(dgtrealmp_state)* p, size_t itno, LTFAT_COMPLEX* cout)
 {
     int status = LTFATERR_SUCCESS;
     CHECKNULL(p);
