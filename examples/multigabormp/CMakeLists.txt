@@ -1,5 +1,3 @@
-add_executable(multigabormpd
-               multigabormpd.cpp)
-
-target_link_libraries(multigabormpd ltfat ${SNDFILE_LIB})
+add_executable(multigabormpd multigabormpd.cpp)
+target_link_libraries(multigabormpd ltfat)
 

@@ -270,7 +270,7 @@ static void kf_bfly_generic(
             for (q = 1; q < p; ++q )
             {
                 twidx += fstride * k;
-                if (twidx >= Norig) twidx -= Norig;
+                if (twidx >= (size_t) Norig) twidx -= Norig;
                 C_MUL(t, scratch[q] , twiddles[twidx] );
                 C_ADDTO( Fout[ k ] , t);
             }
