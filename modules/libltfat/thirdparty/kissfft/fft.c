@@ -265,7 +265,7 @@ static void kf_bfly_generic(
         k = u;
         for ( q1 = 0 ; q1 < p ; ++q1 )
         {
-            int twidx = 0;
+            size_t twidx = 0;
             Fout[ k ] = scratch[0];
             for (q = 1; q < p; ++q )
             {

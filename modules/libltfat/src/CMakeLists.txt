@@ -1,4 +1,3 @@
-
 SET(src_files
     dgt.c dgtreal_fb.c dgt_multi.c dgt_ola.c dgt_shear.c
     dgtreal_long.c dwilt.c idwilt.c wmdct.c iwmdct.c
@@ -68,77 +67,46 @@ target_compile_definitions(libltfat_commonsingle PUBLIC LTFAT_SINGLE)
 target_compile_definitions(libltfat_double PUBLIC LTFAT_DOUBLE)
 target_compile_definitions(libltfat_single PUBLIC LTFAT_SINGLE)
 
-if (NOFFTW)
-    target_compile_definitions(libltfat_complexsingle PUBLIC KISS)
-    target_compile_definitions(libltfat_complexdouble PUBLIC KISS)
-    target_compile_definitions(libltfat_commondouble PUBLIC  KISS)
-    target_compile_definitions(libltfat_commonsingle PUBLIC  KISS)
-    target_compile_definitions(libltfat_double PUBLIC KISS)
-    target_compile_definitions(libltfat_single PUBLIC KISS)
-else (NOFFTW)
-    target_compile_definitions(libltfat_complexsingle PUBLIC FFTW)
-    target_compile_definitions(libltfat_complexdouble PUBLIC FFTW)
-    target_compile_definitions(libltfat_commondouble PUBLIC  FFTW)
-    target_compile_definitions(libltfat_commonsingle PUBLIC  FFTW)
-    target_compile_definitions(libltfat_double PUBLIC FFTW)
-    target_compile_definitions(libltfat_single PUBLIC FFTW)
-endif (NOFFTW)
-
 if (MSVC)
+if(BUILD_SHARED_LIBS)
     target_compile_definitions(libltfat_complexsingle PUBLIC LTFAT_BUILD_SHARED)
     target_compile_definitions(libltfat_complexdouble PUBLIC LTFAT_BUILD_SHARED)
     target_compile_definitions(libltfat_commondouble PUBLIC LTFAT_BUILD_SHARED)
     target_compile_definitions(libltfat_commonsingle PUBLIC LTFAT_BUILD_SHARED)
     target_compile_definitions(libltfat_double PUBLIC LTFAT_BUILD_SHARED)
     target_compile_definitions(libltfat_single PUBLIC LTFAT_BUILD_SHARED)
+else(BUILD_SHARED_LIBS)
+    target_compile_definitions(libltfat_complexsingle PUBLIC LTFAT_BUILD_STATIC)
+    target_compile_definitions(libltfat_complexdouble PUBLIC LTFAT_BUILD_STATIC)
+    target_compile_definitions(libltfat_commondouble PUBLIC LTFAT_BUILD_STATIC)
+    target_compile_definitions(libltfat_commonsingle PUBLIC LTFAT_BUILD_STATIC)
+    target_compile_definitions(libltfat_double PUBLIC LTFAT_BUILD_STATIC)
+    target_compile_definitions(libltfat_single PUBLIC LTFAT_BUILD_STATIC)
+endif(BUILD_SHARED_LIBS)
 endif(MSVC)
 
-add_library(ltfat_static STATIC
-    $<TARGET_OBJECTS:libltfat_commondouble>
-    $<TARGET_OBJECTS:libltfat_double> $<TARGET_OBJECTS:libltfat_complexdouble>
-    $<TARGET_OBJECTS:libltfat_single> $<TARGET_OBJECTS:libltfat_complexsingle>)
-set_target_properties(ltfat_static PROPERTIES OUTPUT_NAME ltfat)
-
-add_library(ltfatd_static STATIC
-    $<TARGET_OBJECTS:libltfat_commondouble>
-    $<TARGET_OBJECTS:libltfat_double> $<TARGET_OBJECTS:libltfat_complexdouble>)
-set_target_properties(ltfatd_static PROPERTIES OUTPUT_NAME ltfatd)
-
-add_library(ltfatf_static STATIC
-    $<TARGET_OBJECTS:libltfat_commonsingle>
-    $<TARGET_OBJECTS:libltfat_single> $<TARGET_OBJECTS:libltfat_complexsingle>)
-set_target_properties(ltfatf_static PROPERTIES OUTPUT_NAME ltfatf)
-
-target_link_libraries(ltfat_static)
-target_link_libraries(ltfatf_static)
-target_link_libraries(ltfatd_static)
-
-add_library(ltfat SHARED
+add_library(ltfat
     $<TARGET_OBJECTS:libltfat_commondouble>
     $<TARGET_OBJECTS:libltfat_double> $<TARGET_OBJECTS:libltfat_complexdouble>
     $<TARGET_OBJECTS:libltfat_single> $<TARGET_OBJECTS:libltfat_complexsingle>)
 
-
-add_library(ltfatd SHARED
+add_library(ltfatd
     $<TARGET_OBJECTS:libltfat_commondouble>
     $<TARGET_OBJECTS:libltfat_double> $<TARGET_OBJECTS:libltfat_complexdouble>)
 
-add_library(ltfatf SHARED
+add_library(ltfatf
     $<TARGET_OBJECTS:libltfat_commonsingle>
     $<TARGET_OBJECTS:libltfat_single> $<TARGET_OBJECTS:libltfat_complexsingle>)
-
 
 if (MSVC)
+if(BUILD_SHARED_LIBS)
     set_target_properties(ltfat PROPERTIES IMPORT_SUFFIX ".dll.lib")
     set_target_properties(ltfatf PROPERTIES IMPORT_SUFFIX ".dll.lib")
     set_target_properties(ltfatd PROPERTIES IMPORT_SUFFIX ".dll.lib")
+endif(BUILD_SHARED_LIBS)
 endif(MSVC)
-
-
 
 target_link_libraries(ltfat ${LAPACK_LIB} ${BLAS_LIB} ${FFTW3_LIB} ${FFTW3F_LIB} ${LIBS})
 target_link_libraries(ltfatf ${LAPACK_LIB} ${BLAS_LIB} ${FFTW3F_LIB} ${LIBS} )
 target_link_libraries(ltfatd  ${LAPACK_LIB} ${BLAS_LIB} ${FFTW3_LIB} ${LIBS})
 
-
-set(CMAKE_BUILD_TYPE Release)
