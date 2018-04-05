@@ -13,6 +13,8 @@ struct LTFAT_NAME(dgtrealmp_parbuf)
     int*         chanmask;
     ltfat_int           P;
     ltfat_dgtmp_params* params;
+    LTFAT_NAME(dgtrealmp_iterstep_callback)* iterstepcallback;
+    void*                        iterstepcallbackdata;
 //    LTFAT_REAL          chirprate;
 //    LTFAT_REAL          shiftby;
 };
