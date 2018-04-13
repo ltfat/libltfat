@@ -113,7 +113,7 @@ LTFAT_NAME(dgtrealmp_init_gen)(
 
 #ifdef NOBLASLAPACK
     CHECK( LTFATERR_NOBLASLAPACK,
-           p->params->alg != ltfat_dgtmp_alg_LocOMP,
+           p->params->alg != ltfat_dgtmp_alg_locomp,
            "LocOMP requires LAPACK, but libltfat was compiled without it.");
 #endif
 
@@ -190,7 +190,7 @@ LTFAT_NAME(dgtrealmp_init_gen)(
 
     CHECKSTATUS( LTFAT_NAME(dgtrealmpiter_init)(a, M, P, L, &p->iterstate));
 
-    if (p->params->alg == ltfat_dgtmp_alg_LocOMP)
+    if (p->params->alg == ltfat_dgtmp_alg_locomp)
     {
         ltfat_int kernSizeAccum = 0;
         for (ltfat_int k = 0; k < P; k++)
@@ -216,12 +216,14 @@ LTFAT_NAME(dgtrealmp_init_gen)(
                 kernSizeAccum, &p->iterstate->hplan));
     }
 
-    if (p->params->alg == ltfat_dgtmp_alg_LocCyclicMP)
+    if (p->params->alg == ltfat_dgtmp_alg_loccyclicmp)
     {
         p->iterstate->pBufNo = p->params->maxatoms;
         p->iterstate->pBufNo = 0;
         CHECKMEM( p->iterstate->pBuf =
                       LTFAT_NEWARRAY( kpoint, p->params->maxatoms) );
+        // Must be pedantic search (opthervise it can end up in a deadlock)
+        p->params->do_pedantic = 1;
     }
 
     if (p->params->ptype == LTFAT_FREQINV)
@@ -354,14 +356,14 @@ LTFAT_NAME(dgtrealmp_execute_niters)(
 
         switch ( p->params->alg)
         {
-        case ltfat_dgtmp_alg_MP:
+        case ltfat_dgtmp_alg_mp:
             s->err -= LTFAT_NAME(dgtrealmp_execute_mp)( p, s->c[PTOI(origpos)], origpos,
                       cout);
             break;
-        case ltfat_dgtmp_alg_LocOMP:
+        case ltfat_dgtmp_alg_locomp:
             status  = LTFAT_NAME(dgtrealmp_execute_locomp)( p, origpos, cout);
             break;
-        case ltfat_dgtmp_alg_LocCyclicMP:
+        case ltfat_dgtmp_alg_loccyclicmp:
             status  = LTFAT_NAME(dgtrealmp_execute_cyclicmp)( p, origpos, cout);
             break;
         }
@@ -562,13 +564,15 @@ LTFAT_NAME(dgtrealmpiter_init)(
         CHECKMEM( s->maxcols[p]    = LTFAT_NAME_REAL(malloc)(N) );
         CHECKMEM( s->maxcolspos[p] = LTFAT_NEWARRAY(ltfat_int, N) );
         CHECKSTATUS( LTFAT_NAME(maxtree_init)(N, N,
-                                              ltfat_imax(0, ltfat_pow2base(ltfat_nextpow2(N)) - 4), &s->tmaxtree[p]));
+                                              ltfat_imax(0, ltfat_pow2base(ltfat_nextpow2(N)) - 4),
+                                              &s->tmaxtree[p]));
 
         CHECKMEM( s->fmaxtree[p] = LTFAT_NEWARRAY(LTFAT_NAME(maxtree)*, N));
         for (ltfat_int n = 0; n < N; n++ )
         {
             CHECKSTATUS( LTFAT_NAME(maxtree_init)(
-                             M2, M[p], ltfat_imax(0, ltfat_pow2base(ltfat_nextpow2(M[p])) - 4),
+                             M2, M[p],
+                             ltfat_imax(0, ltfat_pow2base(ltfat_nextpow2(M[p])) - 4),
                              &s->fmaxtree[p][n]));
         }
 
