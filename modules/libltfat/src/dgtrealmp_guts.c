@@ -265,6 +265,54 @@ LTFAT_NAME(dgtrealmp_execute_locomp)(
     return LTFAT_DGTREALMP_STATUS_CANCONTINUE;
 }
 
+int
+LTFAT_NAME(dgtrealmp_execute_selfprojmp)(
+    LTFAT_NAME(dgtrealmp_state)* p,
+    kpoint origpos, LTFAT_COMPLEX** cout)
+{
+    LTFAT_NAME(dgtrealmpiter_state)* s = p->iterstate;
+
+    s->err -= LTFAT_NAME(dgtrealmp_execute_mp)(
+                  p, s->c[PTOI(origpos)], origpos, cout);
+
+    LTFAT_NAME(dgtrealmp_execute_findneighbors)(p, origpos, s->pBuf, &s->pBufNo);
+
+    if ( s->pBufNo == 1 )
+        return LTFAT_DGTREALMP_STATUS_CANCONTINUE;
+
+    for (size_t cycl = 0; cycl < p->params->cycles; cycl++ )
+    {
+        for (int pIdx2 = s->pBufNo -1; pIdx2 >= 0 ; pIdx2--)
+        {
+            kpoint spmax = s->pBuf[0];
+            LTFAT_REAL projenergymax;
+
+            LTFAT_COMPLEX dummy_cvaldual;
+            LTFAT_NAME(dgtrealmp_execute_dualprodandprojenergy)(
+                p, spmax, s->c[PTOI(spmax)], &dummy_cvaldual, &projenergymax);
+
+            for (int pIdx = s->pBufNo -1; pIdx > 0 ; pIdx--)
+            {
+                kpoint pp = s->pBuf[pIdx];
+
+                LTFAT_REAL projenergy;
+                LTFAT_NAME(dgtrealmp_execute_dualprodandprojenergy)(
+                    p, pp, s->c[PTOI(pp)], &dummy_cvaldual, &projenergy);
+
+                if(projenergy > projenergymax)
+                {
+                    projenergymax = projenergy;
+                    spmax = pp;
+                }
+            }
+
+            s->err -= LTFAT_NAME(dgtrealmp_execute_mp)(
+                        p, s->c[PTOI(spmax)], spmax, cout);
+        }
+
+    }
+    return LTFAT_DGTREALMP_STATUS_CANCONTINUE;
+}
 
 int
 LTFAT_NAME(dgtrealmp_execute_cyclicmp)(
@@ -273,97 +321,46 @@ LTFAT_NAME(dgtrealmp_execute_cyclicmp)(
 {
     LTFAT_NAME(dgtrealmpiter_state)* s = p->iterstate;
 
-    /* DEBUGNOTE("999999999999999999999999999999999999"); */
-    /* long double errstart = s->err; */
-    /*  */
-    /* DEBUG("Errstart=%Lf",s->err); */
+    // Normal MP atom
     s->err -= LTFAT_NAME(dgtrealmp_execute_mp)(
                   p, s->c[PTOI(origpos)], origpos, cout);
 
-    s->pBufNo = 0;
-    s->pBuf[s->pBufNo++] = origpos;
+    LTFAT_NAME(dgtrealmp_execute_findneighbors)(p, origpos, s->pBuf, &s->pBufNo);
+
+    if ( s->pBufNo == 1 )
+        return LTFAT_DGTREALMP_STATUS_CANCONTINUE;
 
     for (size_t cycl = 0; cycl < p->params->cycles; cycl++ )
     {
-        size_t pBufNoStart = s->pBufNo;
-        for (size_t posIdx = 0; posIdx < pBufNoStart; posIdx++)
+        for (int pIdx = s->pBufNo -1; pIdx >= 0 ; pIdx--)
         {
-            kpoint origpos2 = s->pBuf[posIdx];
-            for (ltfat_int w2 = 0; w2 < s->P; w2++)
+            kpoint dummypos;
+            LTFAT_NAME(dgtrealmp_execute_findmaxatom)( p, &dummypos);
+            long double erratomstart = s->err;
+
+            kpoint* pos = &s->pBuf[pIdx];
+
+            long double inverr =
+                LTFAT_NAME(dgtrealmp_execute_invmp)( p, *pos, cout);
+
+            s->err += inverr;
+
+            s->suppind[PTOI((*pos))] = 0;
+            s->curratoms--;
+            LTFAT_NAME(dgtrealmp_execute_findmaxatom)(p, pos);
+            if ( !s->suppind[PTOI((*pos))] ) s->curratoms++;
+
+            long double fwderr =
+                LTFAT_NAME(dgtrealmp_execute_mp)( p, s->c[PTOI((*pos))] , *pos, cout);
+
+            s->err -= fwderr;
+
+            long double erratomend = s->err;
+            if( (erratomstart - erratomend) < (long double) (-1e-6))
             {
-                ltfat_int m2start, n2start;
-                ksize   kdim2; kanchor kmid2; kpoint  kstart2;
-                kpoint pos; pos.w = w2;
-
-                LTFAT_NAME(dgtrealmp_execute_indices)(
-                    p, origpos2, &pos, &m2start, &n2start,
-                    &kdim2, &kmid2, &kstart2);
-
-                LTFAT_NAME(kerns)* k = p->gramkerns[origpos2.w + s->P * w2];
-
-                NLOOP
-                {
-                    ltfat_int nidx2 = nidx;
-                    if( nidx < 0 ) nidx2 +=  p->N[w2];
-                    if( nidx >= p->N[w2] ) nidx2 -= p->N[w2];
-                    unsigned int* suppCol = s->suppind[w2] + nidx2 * p->M2[w2];
-                    MLOOP
-                    {
-                        if ( (midx >= 0 && midx < p->M2[w2] ) && suppCol[midx])
-                        {
-                            /* if ( kmidx < k->range[knidx].start || */
-                            /* kmidx > k->size.height - 1 - k->range[knidx].end)  continue; */
-                            pos = kpoint_init(midx, nidx2, w2);
-
-                            int alreadyhave = 0;
-                            for (size_t pIdx = 0; pIdx < s->pBufNo; pIdx++ )
-                                if ((alreadyhave = kpoint_isequal(s->pBuf[pIdx], pos))) break;
-
-                            if (!alreadyhave) s->pBuf[s->pBufNo++] = pos;
-                        }
-                    }
-                }
-            }
-
-            if ( s->pBufNo == 1 )
-                return LTFAT_DGTREALMP_STATUS_CANCONTINUE;
-
-
-            /* DEBUGNOTE("8888888888888888888888888888888888888"); */
-            /* DEBUG("Orig   m=%td,n=%td,err=%.10Lf",origpos.m,origpos.n); */
-            for (int pIdx = s->pBufNo -1; pIdx >= 0 ; pIdx--)
-            {
-                kpoint dummypos;
-                LTFAT_NAME(dgtrealmp_execute_findmaxatom)( p, &dummypos);
-                long double erratomstart = s->err;
-
-                kpoint* pos = &s->pBuf[pIdx];
-                /* DEBUGNOTE("*********************************************"); */
-                /* DEBUG("Before m=%td,n=%td,err=%.10Lf",pos->m,pos->n,s->err); */
-
-                long double inverr = LTFAT_NAME(dgtrealmp_execute_invmp)( p, *pos, cout);
-                s->err += inverr;
-
-                /* DEBUG("Inv err=%.10Lf",inverr); */
-                /* DEBUG("Chosen previsously %td",s->suppind[PTOI((*pos))]  ); */
-                s->suppind[PTOI((*pos))] = 0;
-                s->curratoms--;
-                LTFAT_NAME(dgtrealmp_execute_findmaxatom)(p, pos);
-                if ( !s->suppind[PTOI((*pos))] ) s->curratoms++;
-
-                long double fwderr =  LTFAT_NAME(dgtrealmp_execute_mp)( p, s->c[PTOI((*pos))] , *pos, cout);
-                /* DEBUG("Fwd err=%.10Lf",fwderr); */
-                s->err -= fwderr;
-                // At worst, the same atom has been selected
-                /* DEBUG("After  m=%td,n=%td,err=%.10Lf",pos->m,pos->n,s->err); */
-
-                long double erratomend = s->err;
-                if( (erratomstart - erratomend) < (long double) (-1e-6))
-                {
-                    // The selected atom is worse! 
-                    // printf("itno:%td, errdif=%.8Lf\n", s->currit , erratomstart - erratomend);
-                    return LTFAT_DGTREALMP_STATUS_STALLED;
-                }
+                // The selected atom is worse! 
+                // printf("itno:%td, errdif=%.8Lf\n", s->currit , erratomstart - erratomend);
+                return LTFAT_DGTREALMP_STATUS_STALLED;
             }
         }
     }
@@ -736,6 +733,49 @@ LTFAT_NAME(dgtrealmp_execute_findmaxatom)(
         }
     }
     return retval;
+}
+
+int
+LTFAT_NAME(dgtrealmp_execute_findneighbors)(
+        LTFAT_NAME(dgtrealmp_state)* p, kpoint origpos,
+        kpoint* nBuf, size_t* nCount)
+{
+    LTFAT_NAME(dgtrealmpiter_state)* s = p->iterstate;
+    *nCount = 0;
+    nBuf[(*nCount)++] = origpos;
+
+    for (ltfat_int w2 = 0; w2 < s->P; w2++)
+    {
+        ltfat_int m2start, n2start;
+        ksize   kdim2; kanchor kmid2; kpoint  kstart2;
+        kpoint pos; pos.w = w2;
+
+        LTFAT_NAME(dgtrealmp_execute_indices)(
+            p, origpos, &pos, &m2start, &n2start,
+            &kdim2, &kmid2, &kstart2);
+
+        LTFAT_NAME(kerns)* k = p->gramkerns[origpos.w + s->P * w2];
+
+        NLOOP
+        {
+            unsigned int* suppCol = s->suppind[w2] + nidx * p->M2[w2];
+            MLOOP
+            {
+                if ( (midx >= 0 && midx < p->M2[w2] ) && suppCol[midx])
+                {
+                    pos = kpoint_init(midx, nidx, w2);
+
+                    int alreadyhave = 0;
+                    for (size_t pIdx = 0; pIdx < *nCount; pIdx++ )
+                        if ((alreadyhave = kpoint_isequal(nBuf[pIdx], pos))) break;
+
+                    if (!alreadyhave) nBuf[(*nCount)++] = pos;
+                }
+            }
+        }
+    }
+
+    return 0;
 }
 
 #ifdef NOBLASLAPACK

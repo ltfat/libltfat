@@ -28,7 +28,7 @@ typedef enum
     ltfat_dgtmp_alg_mp              = 0,
     ltfat_dgtmp_alg_locomp          = 1,
     ltfat_dgtmp_alg_loccyclicmp     = 2,
-/*    ltfat_dgtmp_alg_LocSelfProjdMP  = 3,*/
+    ltfat_dgtmp_alg_locselfprojmp   = 3,
 } ltfat_dgtmp_alg;
 
 typedef struct ltfat_dgtmp_params ltfat_dgtmp_params;

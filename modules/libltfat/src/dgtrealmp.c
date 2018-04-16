@@ -216,9 +216,9 @@ LTFAT_NAME(dgtrealmp_init_gen)(
                 kernSizeAccum, &p->iterstate->hplan));
     }
 
-    if (p->params->alg == ltfat_dgtmp_alg_loccyclicmp)
+    if (p->params->alg == ltfat_dgtmp_alg_loccyclicmp ||
+        p->params->alg == ltfat_dgtmp_alg_locselfprojmp)
     {
-        p->iterstate->pBufNo = p->params->maxatoms;
         p->iterstate->pBufNo = 0;
         CHECKMEM( p->iterstate->pBuf =
                       LTFAT_NEWARRAY( kpoint, p->params->maxatoms) );
@@ -365,6 +365,9 @@ LTFAT_NAME(dgtrealmp_execute_niters)(
             break;
         case ltfat_dgtmp_alg_loccyclicmp:
             status  = LTFAT_NAME(dgtrealmp_execute_cyclicmp)( p, origpos, cout);
+            break;
+        case ltfat_dgtmp_alg_locselfprojmp:
+            status  = LTFAT_NAME(dgtrealmp_execute_selfprojmp)( p, origpos, cout);
             break;
         }
 

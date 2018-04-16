@@ -207,6 +207,7 @@ ltfat_dgtmp_alg_isvalid(ltfat_dgtmp_alg in)
     case ltfat_dgtmp_alg_mp:
     case ltfat_dgtmp_alg_locomp:
     case ltfat_dgtmp_alg_loccyclicmp:
+    case ltfat_dgtmp_alg_locselfprojmp:
         isvalid = 1;
     }
 
