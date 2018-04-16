@@ -135,6 +135,7 @@ int main(int argc, char* argv[])
             string algstr = result["alg"].as<string>();
             if( algstr.compare("mp") == 0 ) alg = ltfat_dgtmp_alg_mp;
             else if( algstr.compare("cyclicmp") == 0 ) alg = ltfat_dgtmp_alg_loccyclicmp;
+            else if( algstr.compare("selfprojmp") == 0 ) alg = ltfat_dgtmp_alg_locselfprojmp;
             else
             {
                 cout << "Unrecognized algorithm." << endl;
