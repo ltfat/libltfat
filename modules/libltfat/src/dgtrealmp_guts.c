@@ -306,9 +306,12 @@ LTFAT_NAME(dgtrealmp_execute_selfprojmp)(
                 }
             }
 
+            if(projenergymax < 1e-8) break;
+
             s->err -= LTFAT_NAME(dgtrealmp_execute_mp)(
                         p, s->c[PTOI(spmax)], spmax, cout);
         }
+
 
     }
     return LTFAT_DGTREALMP_STATUS_CANCONTINUE;
@@ -321,12 +324,13 @@ LTFAT_NAME(dgtrealmp_execute_cyclicmp)(
 {
     LTFAT_NAME(dgtrealmpiter_state)* s = p->iterstate;
 
-    // Normal MP atom
+    // Normal MP step
     s->err -= LTFAT_NAME(dgtrealmp_execute_mp)(
                   p, s->c[PTOI(origpos)], origpos, cout);
 
     LTFAT_NAME(dgtrealmp_execute_findneighbors)(p, origpos, s->pBuf, &s->pBufNo);
 
+    // There are no neighbors
     if ( s->pBufNo == 1 )
         return LTFAT_DGTREALMP_STATUS_CANCONTINUE;
 
@@ -600,8 +604,6 @@ LTFAT_NAME(dgtrealmp_execute_updateresiduum)(
         nover = ltfat_imax(0, n2end - p->N[w2]);
         if (nover > 0)
             n2end = p->N[w2];
-
-        DEBUG("nstart=%td,nend=%td,over=%td",n2start,n2end,nover);
 
         LTFAT_DGTREALMP_APPLYKERNEL(cval)
 
