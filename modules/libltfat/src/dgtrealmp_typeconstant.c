@@ -168,6 +168,18 @@ error:
 }
 
 LTFAT_API int
+ltfat_dgtmp_setpar_atominterferenceweight(
+    ltfat_dgtmp_params* params, double weight)
+{
+    int status = LTFATERR_SUCCESS;
+    CHECKNULL(params);
+    params->interferenceweight = weight;
+    params->do_atinterference = weight != (LTFAT_REAL) 0.0;
+error:
+    return status;
+}
+
+LTFAT_API int
 ltfat_dgtmp_setpar_kernrelthr(
     ltfat_dgtmp_params* params, double thr)
 {

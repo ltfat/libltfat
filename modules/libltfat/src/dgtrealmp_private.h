@@ -10,11 +10,11 @@ struct LTFAT_NAME(dgtrealmp_parbuf)
     ltfat_int*          gl;
     ltfat_int*          a;
     ltfat_int*          M;
-    int*         chanmask;
+    int*                chanmask;
     ltfat_int           P;
     ltfat_dgtmp_params* params;
+    void*               iterstepcallbackdata;
     LTFAT_NAME(dgtrealmp_iterstep_callback)* iterstepcallback;
-    void*                        iterstepcallbackdata;
 //    LTFAT_REAL          chirprate;
 //    LTFAT_REAL          shiftby;
 };
@@ -28,13 +28,15 @@ struct ltfat_dgtmp_params
     double                kernrelthr;
     size_t                maxit;
     size_t                maxatoms;
-    size_t             iterstep;
+    size_t                iterstep;
     int                   verbose;
     int                   initwasrun;
     int                   treelevels;
     size_t                cycles;
     ltfat_phaseconvention ptype;
     int                   do_pedantic;
+    LTFAT_REAL            interferenceweight;
+    int                   do_atinterference;
 };
 
 typedef struct
@@ -70,30 +72,31 @@ typedef struct
 
 typedef struct
 {
-    ksize              size;
-    kanchor             mid;
-    ltfat_int           kNo;
-    ltfat_int         kSkip;
-    LTFAT_COMPLEX**    mods;
-    LTFAT_COMPLEX*     kval;
-    krange*           range;
-    krange*          srange;
-    LTFAT_REAL       absthr;
-    double             Mrat;
-    double             arat;
-    ltfat_int         Mstep;
-    ltfat_int         astep;
-    LTFAT_COMPLEX*     atprods;
-    LTFAT_REAL* oneover1minatprodnorms;
-    ltfat_int   atprodsNo;
+    ksize                 size;
+    kanchor               mid;
+    ltfat_int             kNo;
+    ltfat_int             kSkip;
+    LTFAT_COMPLEX**       mods;
+    LTFAT_COMPLEX*        kval;
+    krange*               range;
+    krange*               srange;
+    LTFAT_REAL            absthr;
+    double                Mrat;
+    double                arat;
+    ltfat_int             Mstep;
+    ltfat_int             astep;
+    LTFAT_COMPLEX*        atprods;
+    LTFAT_REAL*           oneover1minatprodnorms;
+    ltfat_int             atprodsNo;
+    ltfat_phaseconvention ptype;
     int cloned;
-     ltfat_phaseconvention ptype;
 } LTFAT_NAME(kerns);
 
 
 typedef struct
 {
     LTFAT_COMPLEX**        c;
+    LTFAT_COMPLEX**        cprod;
     LTFAT_REAL**           maxcols;
     ltfat_int**            maxcolspos;
     LTFAT_NAME(maxtree)**  tmaxtree;
@@ -131,13 +134,13 @@ struct LTFAT_NAME(dgtrealmp_state)
     LTFAT_NAME(dgtrealmpiter_state)* iterstate;
     LTFAT_NAME(kerns)**             gramkerns; // PxP plans
     LTFAT_NAME(dgtreal_plan)**       dgtplans;  // P plans
-    ltfat_int*        a;
-    ltfat_int*        M;
-    ltfat_int*       M2;
-    ltfat_int*        N;
-    int*       chanmask;
-    ltfat_int         P;
-    ltfat_int         L;
+    ltfat_int*          a;
+    ltfat_int*          M;
+    ltfat_int*          M2;
+    ltfat_int*          N;
+    int*                chanmask;
+    ltfat_int           P;
+    ltfat_int           L;
     ltfat_dgtmp_params* params;
     LTFAT_COMPLEX**     couttmp;
     LTFAT_NAME(dgtrealmp_state_closure)** closures;
@@ -178,7 +181,7 @@ extern "C" {
 
 int
 LTFAT_NAME(dgtrealmpiter_init)(
-    ltfat_int a[], ltfat_int M[], ltfat_int P, ltfat_int L,
+    ltfat_int a[], ltfat_int M[], ltfat_int P, ltfat_int L, int do_atinterference,
     LTFAT_NAME(dgtrealmpiter_state)** state);
 
 int
@@ -262,7 +265,7 @@ LTFAT_NAME(dgtrealmp_execute_findneighbors)(
 int
 LTFAT_NAME(dgtrealmp_execute_updateresiduum)(
     LTFAT_NAME(dgtrealmp_state)* p, kpoint pos, LTFAT_COMPLEX cval,
-    int do_substract);
+    int do_substract, LTFAT_COMPLEX** c);
 
 LTFAT_REAL
 LTFAT_NAME(dgtrealmp_execute_atenergy)(

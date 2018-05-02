@@ -2,14 +2,28 @@
 
 LTFAT_REAL
 LTFAT_NAME(pedantic_callback)(void* userdata,
-                              LTFAT_COMPLEX cval, ltfat_int pos)
+                              LTFAT_COMPLEX cval, ltfat_int m)
 {
-    LTFAT_NAME(dgtrealmp_state_closure)* p =
+    LTFAT_NAME(dgtrealmp_state_closure)* pc =
         (LTFAT_NAME(dgtrealmp_state_closure)*) userdata;
+    LTFAT_NAME(dgtrealmp_state)* p = pc->state;
     LTFAT_COMPLEX cvaldual;
     LTFAT_REAL projenergy;
+    kpoint pos = kpoint_init(m,pc->n,pc->w);
     LTFAT_NAME(dgtrealmp_execute_dualprodandprojenergy)(
-        p->state, kpoint_init(pos,p->n,p->w), cval, &cvaldual, &projenergy);
+        p, pos, cval, &cvaldual, &projenergy);
+
+    if( p->params->do_atinterference)
+    {
+        int uniquenyquest = p->M[pos.w] % 2 == 0;
+        int do_conj = !( pos.m == 0 || (pos.m == p->M2[pos.w] - 1 && uniquenyquest));
+        LTFAT_NAME(dgtrealmpiter_state)* s = p->iterstate;
+        LTFAT_COMPLEX solprod = s->cprod[PTOI(pos)];
+        LTFAT_REAL atintereference =
+                ltfat_real(cvaldual)*ltfat_real(solprod) + ltfat_imag(cvaldual)*ltfat_imag(solprod);
+        if(do_conj) atintereference *= (LTFAT_REAL) 2.0;
+        projenergy -= p->params->interferenceweight * atintereference;
+    }
 
     return projenergy;
 }
@@ -188,7 +202,8 @@ LTFAT_NAME(dgtrealmp_init_gen)(
     /* } */
 #endif
 
-    CHECKSTATUS( LTFAT_NAME(dgtrealmpiter_init)(a, M, P, L, &p->iterstate));
+    CHECKSTATUS(
+            LTFAT_NAME(dgtrealmpiter_init)(a, M, P, L, params->do_atinterference, &p->iterstate));
 
     if (p->params->alg == ltfat_dgtmp_alg_locomp)
     {
@@ -220,8 +235,27 @@ LTFAT_NAME(dgtrealmp_init_gen)(
         p->params->alg == ltfat_dgtmp_alg_locselfprojmp)
     {
         p->iterstate->pBufNo = 0;
+        ltfat_int maxneighbors = 0;
+
+        for (ltfat_int k1 = 0; k1 < P; k1++)
+        {
+            for (ltfat_int k2 = 0; k2 < P; k2++)
+            {
+                LTFAT_NAME(kerns)* currkern = p->gramkerns[k1 + k2 * P];
+                ltfat_int h2 = ltfat_idivceil( currkern->size.height, currkern->Mstep);
+                ltfat_int w2 = ltfat_idivceil( currkern->size.width, currkern->astep);
+                ltfat_int smallsize = h2*w2;
+
+                if( maxneighbors > p->iterstate->pBufNo)
+                    p->iterstate->pBufNo = maxneighbors;
+            }
+        }
+
+        maxneighbors = ltfat_imin(maxneighbors,p->params->maxatoms );
+        maxneighbors = p->params->maxatoms;
+
         CHECKMEM( p->iterstate->pBuf =
-                      LTFAT_NEWARRAY( kpoint, p->params->maxatoms) );
+                      LTFAT_NEWARRAY( kpoint, maxneighbors) );
         // Must be pedantic search (opthervise it can end up in a deadlock)
         p->params->do_pedantic = 1;
     }
@@ -322,6 +356,10 @@ LTFAT_NAME(dgtrealmp_reset)(LTFAT_NAME(dgtrealmp_state)* p, const LTFAT_REAL* f)
 
         memset( p->iterstate->suppind[k], 0 ,
                 p->M2[k] * p->N[k] * sizeof * p->iterstate->suppind[k] );
+
+        if( istate->cprod)
+            memset(istate->cprod[k], 0,
+                   p->N[k] * p->M2[k] * sizeof * istate->cprod[k] );
     }
 
 error:
@@ -540,7 +578,7 @@ error:
 
 int
 LTFAT_NAME(dgtrealmpiter_init)(
-    ltfat_int a[], ltfat_int M[], ltfat_int P, ltfat_int L,
+    ltfat_int a[], ltfat_int M[], ltfat_int P, ltfat_int L, int do_atinterference,
     LTFAT_NAME(dgtrealmpiter_state)** state)
 {
     LTFAT_NAME(dgtrealmpiter_state)* s = NULL;
@@ -549,6 +587,9 @@ LTFAT_NAME(dgtrealmpiter_init)(
     CHECKNULL( state );
     CHECKMEM( s =    LTFAT_NEW( LTFAT_NAME(dgtrealmpiter_state)) );
     CHECKMEM( s->c = LTFAT_NEWARRAY(LTFAT_COMPLEX*, P));
+    if(do_atinterference)
+        CHECKMEM( s->cprod = LTFAT_NEWARRAY(LTFAT_COMPLEX*, P));
+
     CHECKMEM( s->N = LTFAT_NEWARRAY(ltfat_int, P));
     CHECKMEM( s->suppind = LTFAT_NEWARRAY(unsigned int*, P));
     CHECKMEM( s->maxcols    =  LTFAT_NEWARRAY(LTFAT_REAL*, P));
@@ -563,6 +604,8 @@ LTFAT_NAME(dgtrealmpiter_init)(
         s->N[p] = N;
         ltfat_int M2 = M[p] / 2 + 1;
         CHECKMEM( s->c[p] = LTFAT_NAME_COMPLEX(malloc)(N * M2) );
+        if(do_atinterference)
+            CHECKMEM( s->cprod[p] = LTFAT_NAME_COMPLEX(malloc)(N * M2) );
         CHECKMEM( s->suppind[p] = LTFAT_NEWARRAY(unsigned int, N * M2 ));
         CHECKMEM( s->maxcols[p]    = LTFAT_NAME_REAL(malloc)(N) );
         CHECKMEM( s->maxcolspos[p] = LTFAT_NEWARRAY(ltfat_int, N) );
@@ -603,6 +646,14 @@ LTFAT_NAME(dgtrealmpiter_done)(LTFAT_NAME(dgtrealmpiter_state)** state)
             ltfat_safefree(s->c[p]);
 
         ltfat_free(s->c);
+    }
+
+    if (s->cprod)
+    {
+        for (ltfat_int p = 0; p < s->P; p++)
+            ltfat_safefree(s->cprod[p]);
+
+        ltfat_free(s->cprod);
     }
 
     if (s->suppind)
@@ -840,6 +891,7 @@ LTFAT_NAME(dgtrealmp_init_gen_compact)(
     ltfat_int M[], ltfat_dgtmp_params* params,
     LTFAT_NAME(dgtrealmp_state)** pout)
 {
+
     int status = LTFATERR_SUCCESS;
     const LTFAT_REAL** multig = NULL;
     CHECK( LTFATERR_NOTPOSARG, P > 0, "P must be positive (passed %td)", P);

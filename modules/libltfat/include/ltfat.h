@@ -48,35 +48,6 @@ extern "C"
 #include "ltfat/typeconstant.h"
 
 /* -------- Create the single precision routines headers ----- */
-
-#ifndef LTFAT_DOUBLE
-#   ifndef LTFAT_SINGLE
-#      define LTFAT_SINGLE_WASNOTDEFINED
-#      define LTFAT_SINGLE
-#   endif
-
-#   include "ltfat/typecomplexindependent.h"
-
-#   ifndef LTFAT_COMPLEXTYPE
-#       define LTFAT_COMPLEXTYPE
-#       include "ltfat/typecomplexindependent.h"
-#       undef LTFAT_COMPLEXTYPE
-#       include "ltfat/typeindependent.h"
-#   else
-#       undef LTFAT_COMPLEXTYPE
-#       include "ltfat/typeindependent.h"
-#       include "ltfat/typecomplexindependent.h"
-#       define LTFAT_COMPLEXTYPE
-#   endif
-
-#   ifdef LTFAT_SINGLE_WASNOTDEFINED
-#      undef LTFAT_SINGLE
-#      undef LTFAT_SINGLE_WASNOTDEFINED
-#   endif
-#endif
-
-
-/* -------- Create the single precision routines headers ----- */
 #ifndef LTFAT_SINGLE
 #   ifndef LTFAT_DOUBLE
 #       define LTFAT_DOUBLE_WASNOTDEFINED
@@ -103,6 +74,33 @@ extern "C"
 #   endif
 #endif
 
+/* -------- Create the single precision routines headers ----- */
+
+#ifndef LTFAT_DOUBLE
+#   ifndef LTFAT_SINGLE
+#      define LTFAT_SINGLE_WASNOTDEFINED
+#      define LTFAT_SINGLE
+#   endif
+
+#   include "ltfat/typecomplexindependent.h"
+
+#   ifndef LTFAT_COMPLEXTYPE
+#       define LTFAT_COMPLEXTYPE
+#       include "ltfat/typecomplexindependent.h"
+#       undef LTFAT_COMPLEXTYPE
+#       include "ltfat/typeindependent.h"
+#   else
+#       undef LTFAT_COMPLEXTYPE
+#       include "ltfat/typeindependent.h"
+#       include "ltfat/typecomplexindependent.h"
+#       define LTFAT_COMPLEXTYPE
+#   endif
+
+#   ifdef LTFAT_SINGLE_WASNOTDEFINED
+#      undef LTFAT_SINGLE
+#      undef LTFAT_SINGLE_WASNOTDEFINED
+#   endif
+#endif
 
 // Undef all
 #undef LTFAT_COMPLEX

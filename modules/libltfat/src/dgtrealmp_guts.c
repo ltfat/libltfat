@@ -42,7 +42,7 @@ else{              LTFAT_DGTREALMP_APPLYKERNEL_SIGN(cvaltmp, +) }}
 #define LTFAT_DGTREALMP_APPLYKERNEL_SIGN(ctmp, SIGN){\
 if (p->params->ptype == LTFAT_TIMEINV){\
 NLOOPBOTH(\
-    LTFAT_COMPLEX* currcCol = s->c[w2] + nidx * p->M2[w2];\
+    LTFAT_COMPLEX* currcCol = c[w2] + nidx * p->M2[w2];\
     LTFAT_COMPLEX* kcurrCol = k->kval + knidx * k->size.height;\
     LTFAT_COMPLEX  cvaltmp2 = ctmp * kexp[knidx];\
 MLOOPBOTH(\
@@ -52,7 +52,7 @@ else if (p->params->ptype == LTFAT_FREQINV){\
         kmidx += k->Mstep, mmidx++){\
         s->cvalModBuf[kIdx][mmidx] = ctmp * kexp[kmidx];}\
 NLOOPBOTH(\
-    LTFAT_COMPLEX* currcCol = s->c[w2] + nidx * p->M2[w2];\
+    LTFAT_COMPLEX* currcCol = c[w2] + nidx * p->M2[w2];\
     LTFAT_COMPLEX* kcurrCol = k->kval + knidx * k->size.height;\
 MLOOPBOTH(\
     currcCol[midx] = currcCol[midx] SIGN s->cvalModBuf[kIdx][mmidx] * kcurrCol[kmidx]; \
@@ -381,7 +381,12 @@ LTFAT_NAME(dgtrealmp_execute_mp)(
     LTFAT_NAME(dgtrealmp_execute_dualprodandprojenergy)(
                p, pos, cval, &cvaldual, &projenergy);
 
-    LTFAT_NAME(dgtrealmp_execute_updateresiduum)( p, pos, cvaldual, 1);
+    LTFAT_NAME(dgtrealmp_execute_updateresiduum)( p, pos, cvaldual, 1, p->iterstate->c);
+
+    if( p->params->do_atinterference)
+    {
+        LTFAT_NAME(dgtrealmp_execute_updateresiduum)( p, pos, cvaldual, 0, p->iterstate->cprod);
+    }
 
     p->iterstate->suppind[PTOI(pos)]++;
     cout[PTOI(pos)] += cvaldual;
@@ -414,7 +419,7 @@ LTFAT_NAME(dgtrealmp_execute_invmp)(
     if (!do_conj) plusatenergy /= 2.0;
 
     LTFAT_NAME(dgtrealmp_execute_updateresiduum)(
-        p, pos, coutval, 0);
+        p, pos, coutval, 0, p->iterstate->c);
 
     return plusatenergy;
 }
@@ -464,11 +469,9 @@ LTFAT_NAME(dgtrealmp_execute_dualprodandprojenergy)(
 
     LTFAT_NAME(kerns)* k = p->gramkerns[pos.w + s->P * pos.w];
 
-    *cvaldual = cval;
-    *projenergy = ltfat_norm(cval);
-
     if (do_conj)
     {
+        ltfat_int posinkern = p->M2[pos.w] - pos.m - uniquenyquest;
         if ( pos.m < k->atprodsNo )
         {
             LTFAT_COMPLEX atinprod = (k->atprods[pos.m]);
@@ -477,11 +480,8 @@ LTFAT_NAME(dgtrealmp_execute_dualprodandprojenergy)(
 
             *cvaldual = (cval - conj(cval)*conj(atinprod))*k->oneover1minatprodnorms[pos.m];
             *projenergy = LTFAT_NAME(dgtrealmp_execute_projenergy)( atinprod, *cvaldual);
-            return;
         }
-
-        ltfat_int posinkern = p->M2[pos.w] - pos.m - uniquenyquest;
-        if ( posinkern < k->atprodsNo )
+        else if ( posinkern < k->atprodsNo )
         {
             LTFAT_COMPLEX atinprod = (k->atprods[posinkern]);
 
@@ -490,9 +490,17 @@ LTFAT_NAME(dgtrealmp_execute_dualprodandprojenergy)(
 
             *cvaldual = (cval - conj(cval)*conj(atinprod))*k->oneover1minatprodnorms[posinkern];
             *projenergy = LTFAT_NAME(dgtrealmp_execute_projenergy)( atinprod, *cvaldual);
-            return;
         }
-        *projenergy *= 2.0;
+        else
+        {
+            *cvaldual = cval;
+            *projenergy = 2.0*ltfat_norm(cval);
+        }
+    }
+    else
+    {
+        *cvaldual = cval;
+        *projenergy = ltfat_norm(cval);
     }
 }
 
@@ -557,10 +565,8 @@ LTFAT_NAME(dgtrealmp_execute_conjatpairprod)(
 int
 LTFAT_NAME(dgtrealmp_execute_updateresiduum)(
     LTFAT_NAME(dgtrealmp_state)* p, kpoint origpos, LTFAT_COMPLEX cval,
-    int do_substract)
+    int do_substract, LTFAT_COMPLEX** c)
 {
-
-
     int uniquenyquest = p->M[origpos.w] % 2 == 0;
     int do_conj = !( origpos.m == 0 ||
                      (origpos.m == p->M2[origpos.w] - 1 && uniquenyquest));
@@ -607,7 +613,10 @@ LTFAT_NAME(dgtrealmp_execute_updateresiduum)(
 
         LTFAT_DGTREALMP_APPLYKERNEL(cval)
 
-        LTFAT_DGTREALMP_MARKMODIFIED
+        if( c == s->c)
+        {
+            LTFAT_DGTREALMP_MARKMODIFIED
+        }
 
         ltfat_int posinkern  = kmid2.hmid - 2 * pos.m;
         ltfat_int posinkern2 = kmid2.hmid + 2 * (p->M2[w2] - 1 - pos.m) + 1 -
@@ -638,6 +647,7 @@ LTFAT_NAME(dgtrealmp_execute_updateresiduum)(
         }
 
     }
+
     return 0;
 }
 

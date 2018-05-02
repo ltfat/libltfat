@@ -311,6 +311,16 @@ error:
 }
 
 LTFAT_API int
+LTFAT_NAME(dgtrealmp_setparbuf_atominterferenceweight)(
+    LTFAT_NAME(dgtrealmp_parbuf)* p, LTFAT_REAL weight)
+{
+    int status = LTFATERR_FAILED; CHECKNULL(p);
+    return ltfat_dgtmp_setpar_atominterferenceweight(p->params, weight);
+error:
+    return status;
+}
+
+LTFAT_API int
 LTFAT_NAME(dgtrealmp_setparbuf_iterstepcallback)(
     LTFAT_NAME(dgtrealmp_parbuf)* p,
     LTFAT_NAME(dgtrealmp_iterstep_callback)* callback, void* userdata)

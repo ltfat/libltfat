@@ -68,6 +68,10 @@ ltfat_dgtmp_setpar_iterstep(
     ltfat_dgtmp_params* p, size_t iterstep);
 
 LTFAT_API int
+ltfat_dgtmp_setpar_atominterferenceweight(
+    ltfat_dgtmp_params* params, double weight);
+
+LTFAT_API int
 ltfat_dgtmp_setpar_errtoldb(
     ltfat_dgtmp_params* p, double errtoldb);
 
