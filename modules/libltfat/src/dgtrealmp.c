@@ -69,7 +69,7 @@ LTFAT_NAME(dgtrealmp_init_gen)(
         CHECK(LTFATERR_NOTAFRAME, M[pIdx] >= a[pIdx],
               "M[%td]>=a[%td] failed passed (%td,%td)", pIdx, pIdx,  M[pIdx], a[pIdx]);
         CHECK(LTFATERR_BADARG, M[pIdx] % a[pIdx] == 0,
-              "M[%td] must be divisible by a[%td]. Passed (%td,%td)", pIdx, pIdx, M, a);
+              "M[%td] must be divisible by a[%td]. Passed (%td,%td)", pIdx, pIdx, M[pIdx], a[pIdx]);
 
         CHECK(LTFATERR_BADARG, gl[pIdx] <= L,
               "gl[%td]<=L failed. Window is too long. passed (%td, %td)",
