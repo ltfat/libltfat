@@ -1,5 +1,6 @@
 #include "phaseret/pghi.h"
 #include "ltfat/macros.h"
+#include "ltfat/heapint_private.h"
 #include <float.h>
 
 struct PHASERET_NAME(pghi_plan)
